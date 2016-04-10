@@ -1,0 +1,6 @@
+name = Custom Menu Fields
+description = Allows users to add custom fields to menu items
+core = 7.x
+files[] = custom_menu_fields.module
+files[] = custom_menu_fields.install
+stylesheets[all][] = custom_menu_fields.css

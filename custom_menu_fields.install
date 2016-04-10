@@ -1,0 +1,197 @@
+<?php
+/**
+ * @file custom_menu_fields.install
+ * Contains install and update functions for custom_menu_fields.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function custom_menu_fields_install() {
+  //drupal_install_schema('custom_menu_fields');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function custom_menu_fields_uninstall() {
+  drupal_uninstall_schema('custom_menu_fields');
+  drupal_uninstall_schema('custom_menu_fields_data');
+}
+
+/**
+ * Implements hook_schema().
+ */
+
+function custom_menu_fields_schema() {
+  $schema['custom_menu_fields'] = array(
+    'description' => 'Custom menu fields.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => '',
+        'no export' => TRUE,
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => '',
+      ),
+      'description' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => '',
+      ),
+      'field_type' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'default' => '',
+        'not null' => FALSE,
+        'description' => 'Defines what type of form field to use 
+                          (e.g. text field, textarea, menu list)',
+      ),
+      'menu_type' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'default' => '',
+        'not null' => FALSE,
+        'description' => 'Defines whether this field applies to a menu or a menu item',
+      ),
+      'weight' => array(
+        'type' => 'int',
+        'default' => 100,
+        'not null' => FALSE,
+        'description' => '',
+      ),
+      'vocabulary_id' => array(
+        'type' => 'int',
+        'default' => 0,
+        'not null' => FALSE,
+        'description' => '',
+      ),
+      'permissioned' => array(
+        'type' => 'int',
+        'default' => 0,
+        'not null' => FALSE,
+        'description' => '',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  $schema['custom_menu_fields_data'] = array(
+    'description' => 'Custom menu field data.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => '',
+        'no export' => TRUE,
+      ),
+      'item_id' => array(
+        'type' => 'varchar',
+        'length' => '255',
+        'default' => '',
+        'not null' => TRUE,
+        'description' => 'Menu name or menu link ID this value belongs to.',
+      ),
+      'mfid' => array(
+        'type' => 'int',
+        'default' => 0,
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Menu field this value belongs to.',
+      ),
+      'value' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'description' => '',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+function custom_menu_fields_field_schema($field) {
+  $schema = array(
+    'columns' => array(
+      'value' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'sortable' => TRUE
+      ),
+    ),
+  );
+  
+  return $schema;
+}
+
+/**
+ * Adds vocabulary id and menu_restrictor fields to custom_menu_fields table
+ */
+function custom_menu_fields_update_7100(&$sandbox) {
+  $vocabulary_id = array(
+    'type' => 'int',
+    'default' => 0,
+    'not null' => FALSE,
+    'description' => '',
+  );
+  $menu_restrictor = array(
+    'type' => 'int',
+    'default' => 0,
+    'not null' => FALSE,
+    'description' => 'Boolean value',
+  );
+
+  db_add_field('custom_menu_fields', 'vocabulary_id', $vocabulary_id);
+  db_add_field('custom_menu_fields', 'menu_restrictor', $menu_restrictor);
+}
+
+
+/**
+ * Taking the menu_restrictor field out & putting that functionality into a 
+ * separate module.
+ */
+function custom_menu_fields_update_7101(&$sandbox) {
+	db_drop_field('custom_menu_fields', 'menu_restrictor');
+}
+
+
+/**
+ * Adds exposed_field column to custom_menu_fields table
+ */
+function custom_menu_fields_update_7102(&$sandbox) {
+  $exposed_field = array(
+    'type' => 'int',
+    'default' => 1,
+    'not null' => FALSE,
+    'description' => '',
+  );
+  
+  db_add_field('custom_menu_fields', 'exposed_field', $exposed_field);
+}
+
+/**
+ * Removes the exposed_field column and replaces it with the permissioned column
+ */
+function custom_menu_fields_update_7103(&$sandbox) {
+  $permissioned = array(
+    'type' => 'int',
+    'default' => 0,
+    'not null' => FALSE,
+    'description' => "If true, the module creates a permission that controls who can edit/see this field",
+  );
+  
+  db_drop_field('custom_menu_fields', 'exposed_field');
+  db_add_field('custom_menu_fields', 'permissioned', $permissioned);
+}
+

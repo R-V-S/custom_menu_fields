@@ -1,0 +1,30 @@
+ul#menu-fields-list{
+  width: 95%;
+  display: block;
+  clear: both;
+}
+
+#menu-fields-list li{
+  list-style: none;
+  display: block;
+}
+
+#menu-fields-list > li{
+  clear: both;
+}
+
+#menu-fields-list > li:nth-of-type(odd) li{
+  background: #e3e3e3;
+}
+
+#menu-fields-list > li > ul{
+  
+}
+
+#menu-fields-list > li > ul > li{
+  float: left;
+  width: 19%;
+  height: 22px;
+  background: #fafafa;
+  padding: 3px;
+}
