@@ -33,13 +33,5 @@ Add, modify or remove fields at: admin/structure/menu_fields
 
 Use the following function to retrieve Menu Field data:
 
-menu_fields_get_value($item_id, $mfid)
-  Returns the value of a given menu (or menu item) field. 
-
-  $item_id
-    The menu or menu item ID.
-
-  $mfid
-    Either the name of the field or the ID of the field. Using the ID 
-    yields better performance. The ID is displayed at admin/structure/menu_fields
+`menu_fields_get_value($item_id, $mfid)` returns the value of a given menu (or menu item) field where `$item_id` is the menu or menu item ID and `$mfid` is either the name of the field or the ID of the field. Using the ID yields better performance. The ID is displayed at admin/structure/menu_fields
 
