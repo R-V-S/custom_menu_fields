@@ -2,27 +2,27 @@
 /**
  * @file custom_menu_fields.module
  *
- * Provides an interface for creating help tags that are embedded directly into 
+ * Provides an interface for creating help tags that are embedded directly into
  * forms and are attached to specific fields.
  *
  */
 
 /**
  * Implements hook_permission().
- * 
- * Define two separate permissions, one for viewing help tags, and another for
- * modifying them. 
  *
- * Also define permissions for individual menu fields based on the 'permissioned' menu field value.
+ * Defines two separate permissions, one for viewing help tags, and another for
+ * modifying them.
+ *
+ * Also defines permissions for individual menu fields based on the 'permissioned' menu field value.
  */
 function custom_menu_fields_permission() {
   $custom_menu_fields_permissions = array(
     'administer menu fields' => array(
-      'title' => t('Administer menu fields'), 
+      'title' => t('Administer menu fields'),
       'description' => t('Allow users to create/modify menu field settings'),
     ),
     'include in user role select box' => array(
-      'title' => t('Include in User Role select box'), 
+      'title' => t('Include in User Role select box'),
       'description' => t('For menu fields where "Role" is the selected option, include these roles in the select list.'),
     )
   );
@@ -41,6 +41,9 @@ function custom_menu_fields_permission() {
 
 /**
  * Implements hook_menu().
+ *
+ * Registers URLs for administering custom menu fields.
+ *
  */
 function custom_menu_fields_menu() {
   $items = array();
@@ -80,16 +83,22 @@ function custom_menu_fields_menu() {
   return $items;
 }
 
+/**
+ * Builds out the admin pages at /admin/structure/menu-fields
+ */
 function custom_menu_fields_admin_page($form, &$form_state) {
+  // Grab menu field data
   $custom_menu_fields = custom_menu_fields_get_fields();
 
-
+  // Build out an array of vocabularies for the 'Vocabulary' option below
   $vocab_options = array('none');
   $vocabularies = taxonomy_get_vocabularies();
   foreach($vocabularies as $vocabulary){
     $vocab_options[$vocabulary->vid] = $vocabulary->name;
   }
 
+  // If the 4th path argument is 'delete' and the 5th argument is a menu field
+  // id, display the delete confirmation page.
   if ( arg(4) && (arg(3) === 'delete') ) {
     if ( isset($form_state['input']['confirm']) ) {
       $menu_field = $custom_menu_fields[ arg(4) ];
@@ -110,6 +119,9 @@ function custom_menu_fields_admin_page($form, &$form_state) {
     }
   }
 
+  // If the 4th path argument is 'edit' and the 5th argument is a menu field
+  // id, populate the form with the data from the menu field. Otherwise,
+  // use empty data.
   if ( arg(4) && (arg(3) === 'edit') ) {
     $name = arg(4);
     $values = array(
@@ -134,7 +146,9 @@ function custom_menu_fields_admin_page($form, &$form_state) {
     );
     $name_disabled = false;
   }
-  
+
+  // If the 4th path argument is 'edit' or 'add' (regardless of whether there
+  // is a 5th argument), build out the form.
   if ( arg(3) == 'add' || arg(3) === 'edit') {
     $form['name'] = array(
       '#type' => 'textfield',
@@ -153,7 +167,7 @@ function custom_menu_fields_admin_page($form, &$form_state) {
       //'#description' => t('Select the field to modify'),
       '#required' => FALSE,
       '#default_value' => $values['description'],
-    ); 
+    );
     $form['menu_type'] = array(
       '#type' => 'select',
       '#title' => t('Menu type'),
@@ -162,7 +176,7 @@ function custom_menu_fields_admin_page($form, &$form_state) {
         'menu' => t('Menu')
       ),
       '#default_value' => $values['menu_type'],
-      '#description' => t('Defines whether this field belongs to a menu item 
+      '#description' => t('Defines whether this field belongs to a menu item
                           (default) or a menu')
     );
     $form['field_type'] = array(
@@ -193,7 +207,7 @@ function custom_menu_fields_admin_page($form, &$form_state) {
     $form['weight'] = array(
       '#type' => 'textfield',
       '#title' => t('Weight'),
-      '#description' => t('Must be a number. Default menu fields 
+      '#description' => t('Must be a number. Default menu fields
           get values starting with 5 and incrementally increasing by 10 (e.g. 5, 15, 25, etc.).'),
       '#size' => 4,
       '#default_value' => 100,
@@ -201,7 +215,7 @@ function custom_menu_fields_admin_page($form, &$form_state) {
       '#default_value' => $values['weight'],
     );
     $form['submit'] = array(
-      '#type' => 'submit', 
+      '#type' => 'submit',
       '#value' => t('Submit'),
       '#submit' => array('custom_menu_fields_admin_page_submit'),
     );
@@ -212,8 +226,8 @@ function custom_menu_fields_admin_page($form, &$form_state) {
     return $form;
   } else {
     $header = array(
-      'name' => 'Name', 
-      'description' => 'Description', 
+      'name' => 'Name',
+      'description' => 'Description',
       'menu_type' => 'Menu type',
       'field_type' => 'Field type',
       'weight' => 'Weight',
@@ -223,8 +237,8 @@ function custom_menu_fields_admin_page($form, &$form_state) {
       'delete' => 'Delete',
     );
     $rows = array();
-    
-    
+
+    // If this is not an edit, add, or delete page, display existing menu fields.
     foreach ($custom_menu_fields as $menu_field) {
       $rows[$menu_field['name']] = array(
         'name' => $menu_field['name'],
@@ -251,12 +265,15 @@ function custom_menu_fields_admin_page($form, &$form_state) {
       '#type' => 'markup',
       '#markup' => $table,
     );
-    
+
 
     return $form;
   }
 }
 
+/**
+ * Attempt to create a menu field on admin page submit.
+ */
 function custom_menu_fields_admin_page_submit($form, &$form_state){
   custom_menu_fields_create_field( $form_state['values'] );
 
@@ -264,6 +281,9 @@ function custom_menu_fields_admin_page_submit($form, &$form_state){
   drupal_goto( $base_url . base_path() . 'admin/structure/menu-fields', array('query' => array() ) );
 }
 
+/**
+ * The create field query.
+ */
 function custom_menu_fields_create_field($item) {
   $query = db_merge('custom_menu_fields')
     ->key(array(
@@ -286,6 +306,9 @@ function custom_menu_fields_create_field($item) {
 
 /**
  * Implements hook_menu_link_insert().
+ *
+ * Clears the menu cache so that changes show up.
+ *
  */
 function custom_menu_fields_menu_link_insert($link){
   cache_clear_all('filtered_node_form_menu_options', 'cache_menu');
@@ -296,12 +319,16 @@ function custom_menu_fields_menu_link_insert($link){
  */
 function custom_menu_fields_menu_link_delete($link){
   cache_clear_all('filtered_node_form_menu_options', 'cache_menu');
+
   // Note: the following assumes that if item_id is an integer, it must be a mlid.
   db_delete('custom_menu_fields_data')->condition('item_id', $link['mlid'])->execute();
 }
 
 /**
  * Implements hook_menu_link_update().
+ *
+ * Clears the menu cache so that changes show up.
+ *
  */
 function custom_menu_fields_menu_link_update($link){
   cache_clear_all('filtered_node_form_menu_options', 'cache_menu');
@@ -318,22 +345,25 @@ function custom_menu_fields_menu_delete($menu){
 
 /**
  * Implements hook_form_alter().
+ *
+ * The guts of the module, this is where the menu fields are added to the menu
+ * add/edit forms.
  */
 function custom_menu_fields_form_alter(&$form, &$form_state, $form_id){
   if ($form_id === 'page_node_form'){
-    if(isset($form['menu']['link']['parent']['#options'])){
+    if ( isset($form['menu']['link']['parent']['#options']) ){
       $options =& $form['menu']['link']['parent']['#options'];
       $filtered_options = $options;
-      // ACTION: Mark items that point to the homepage of the site as containers:
+      // Mark items that point to the homepage of the site as containers:
       $filter_options = FALSE; // CURRENTLY DISABLED
-      if($filter_options){
-        if (!$filtered_options = cache_get('filtered_node_form_menu_options', 'cache_menu')) {
+      if ($filter_options){
+        if ( !$filtered_options = cache_get('filtered_node_form_menu_options', 'cache_menu') ) {
           foreach($options as $value=>&$title){
             $exploded_value = explode(':',$value);
             $menu_name = $exploded_value[0];
             $menu_link = menu_link_load($exploded_value[1]);
-            if($menu_link){
-              if($menu_link['href'] === '<front>'){
+            if ($menu_link){
+              if ($menu_link['href'] === '<front>'){
                 $title .= ' (container)';
               }
             }
@@ -345,12 +375,12 @@ function custom_menu_fields_form_alter(&$form, &$form_state, $form_id){
         }
         $options = $filtered_options;
       }
-    } // END: if(isset($form['menu']['link']['parent']['#options']))
-  } // END: if ($form_id === 'page_node_form')
-  
-  
+    }
+  }
+
+
   if ( $form_id === 'menu_edit_item' || ($form_id === 'menu_edit_menu' && isset($form['menu_name']) ) ) {
-    // ACTION: Set weights for default fields:
+    // Set weights for default fields
     $form['link_path']['#weight']   = 5;
     $form['description']['#weight'] = 15;
     $form['enabled']['#weight']     = 25;
@@ -358,22 +388,22 @@ function custom_menu_fields_form_alter(&$form, &$form_state, $form_id){
     $form['parent']['#weight']      = 45;
     $form['weight']['#weight']      = 55;
 
-    // ACTION: Get custom fields:
+    // Get custom fields
     $custom_menu_fields = custom_menu_fields_get_fields();
-    
-    // ACTION: Insert fields into form:
+
+    // Insert fields into form
     foreach($custom_menu_fields as $menu_field){
       $attributes = array('class' => array('custom_menu_fields') );
       $field_type = $menu_field['field_type'];
       if ($form_id === 'menu_edit_item' && $menu_field['menu_type'] !== 'menuitem'){
         continue;
-      } 
+      }
       elseif ($form_id === 'menu_edit_menu' && $menu_field['menu_type'] !== 'menu'){
         continue;
       }
       if ($form_id === 'menu_edit_item'){
         if ( is_array($form['mlid']) && isset($form['mlid']['#value']) ) {
-          $form_mlid = $form['mlid']['#value'];  
+          $form_mlid = $form['mlid']['#value'];
         } else {
           $form_mlid = $form['mlid'];
         }
@@ -382,11 +412,11 @@ function custom_menu_fields_form_alter(&$form, &$form_state, $form_id){
       }
       $is_permissioned = $menu_field['permissioned'];
       if ($is_permissioned) {
-        $is_hidden = !user_access('edit menu field id ' . $menu_field['id']);  
+        $is_hidden = !user_access('edit menu field id ' . $menu_field['id']);
       } else {
         $is_hidden = false;
       }
-      
+
       $default_value = custom_menu_fields_get_value($form_mlid, $menu_field['id']);
       $type = $field_type; // NOTE: This is the type for Drupal's form. Defined separately because it may be redefined later
       $options = array();
@@ -410,14 +440,17 @@ function custom_menu_fields_form_alter(&$form, &$form_state, $form_id){
         '#required' => FALSE,
         '#weight' => $menu_field['weight'],
       );
+
       // Hidden fields require a value to be defined, or else it will fail validation:
       if ($is_hidden) {
         $form['menu-fields-'.$menu_field['id']]['#value'] = $default_value;
       }
+
       if ( ($field_type === 'menulist') || ($field_type ==='menulinklist') ) {
         $form['menu-fields-'.$menu_field['id']]['#options'] = array('' => 'None');
         $form['menu-fields-'.$menu_field['id']]['#options'] += menu_get_menus(TRUE);
       }
+
       if ($field_type === 'menulinklist'){
         // ACTION: Build complete list of menu links (to appease Drupal form validation...)
         $options = array('' => 'None');
@@ -433,6 +466,7 @@ function custom_menu_fields_form_alter(&$form, &$form_state, $form_id){
         } else {
           $default_value = '';
         }
+
         $form['menu-fields-'.$menu_field['id'].'-linklist'] = array(
           '#title' => t($menu_field['name']) . ' Link',
           '#type' => 'select',
@@ -444,12 +478,15 @@ function custom_menu_fields_form_alter(&$form, &$form_state, $form_id){
           '#suffix' => '</div>',
           '#options' => $options,
         );
+
         $form['menu-fields-'.$menu_field['id']]['#ajax'] = array(
           'callback' => 'custom_menu_fields_form_alter_ajax',
           'wrapper' => 'menu-fields-'.$menu_field['id'].'-linklist-wrapper',
         );
+
         $form['menu-fields-'.$menu_field['id']]['#attributes']['menulist-id'] = 'menu-fields-'.$menu_field['id'].'-linklist';
       } // END: if ($field_type === 'menulinklist')
+
       if ($field_type === 'taxonomyterm') {
         $vocabulary_id = $menu_field['vocabulary_id'];
         $terms = taxonomy_get_tree($vocabulary_id);
@@ -468,6 +505,7 @@ function custom_menu_fields_form_alter(&$form, &$form_state, $form_id){
           $form['menu-fields-'.$menu_field['id']]['#options'] = $term_options;
         }
       }
+      
       if ($field_type === 'userrole') {
         $user_roles = array('0' => 'All Users', '2' => 'All Internal/Authenticated Users') + user_roles(FALSE, 'include in user role select box');
         if (count($user_roles) > 1) {
@@ -477,15 +515,15 @@ function custom_menu_fields_form_alter(&$form, &$form_state, $form_id){
           $form['menu-fields-'.$menu_field['id']]['#default_value'] = $default_value;
         } else {
           $form['menu-fields-'.$menu_field['id']]['#type'] = 'markup';
-          $form['menu-fields-'.$menu_field['id']]['#markup'] = 
+          $form['menu-fields-'.$menu_field['id']]['#markup'] =
               t('<strong>'.$menu_field['name'].'</strong>: No user roles have been assigned yet');
         }
-        
+
       }
     }
     $form['#submit'][] = 'custom_menu_fields_form_alter_submit';
   }
-  
+
   return $form;
 }
 
@@ -505,14 +543,14 @@ function custom_menu_fields_form_alter_ajax(&$form, &$form_state){
     $mlid = $link['mlid'];
     if(!preg_match('/http|<front>|calendar/', $link_path)) {
       $options[ $mlid ] = $link['link_title'];
-      
+
     }
   }
   if($options[0]){
     $menulist['#value'] = $options[0];
   }
   $menulist['#options'] = $options;
-  
+
   return $menulist;
 }
 
@@ -541,15 +579,15 @@ function custom_menu_fields_get_mfid($name) {
 }
 
 /**
- * Returns the value of a given menu (or menu item) field. 
- * 
- * @param $item_id 
+ * Returns the value of a given menu (or menu item) field.
+ *
+ * @param $item_id
  *   The menu or menu item ID.
- * 
+ *
  * @param $identifier
- *   Either the name of the field or the ID of the field. Using the ID yields 
+ *   Either the name of the field or the ID of the field. Using the ID yields
  *   better performance. The ID is displayed at admin/tructure/custom_menu_fields
- * 
+ *
  * @return
  *   A string containing the appropriate value, or FALSE if no value is set.
  */
@@ -591,11 +629,11 @@ function custom_menu_fields_get_value($item_id, $identifier) {
           $this_item_id = $record['item_id'];
           $this_mfid = $record['mfid'];
           if (@unserialize($record['value']) !== FALSE || $record['value'] === 'b:0;') {
-            $static_values[$this_mfid][$this_item_id] = unserialize( $record['value'] );  
+            $static_values[$this_mfid][$this_item_id] = unserialize( $record['value'] );
           } else {
             $static_values[$this_mfid][$this_item_id] = $record['value'];
           }
-        } 
+        }
       }
       // Set the cache for 24 hours (60*60*24 = 86400)
       cache_set($cache_key,$static_values,'cache',time()+86400);
@@ -671,15 +709,15 @@ function custom_menu_fields_form_alter_submit($form, &$form_state){
   }
   if (isset($item['old_name']) && $item['old_name'] == '') {
     $item_id = 'menu-' . $item_id;
-  } 
-  
+  }
+
   // ACTION: Get custom menu fields (not the data, just the fields themselves)
   $custom_menu_fields = custom_menu_fields_get_fields();
-  
+
   // ACTION: Get field values from the form
   foreach ($custom_menu_fields as $menu_field) {
     $mfid = $menu_field['id'];
-    $field_name = 'menu-fields-' . $mfid; 
+    $field_name = 'menu-fields-' . $mfid;
     if ( isset( $item[$field_name] ) )  {
       $value = $item[$field_name];
       if ( (isset($form[$field_name]['#attributes']['serialized']) ) && ($form[$field_name]['#attributes']['serialized'] == true) ) {
@@ -687,7 +725,7 @@ function custom_menu_fields_form_alter_submit($form, &$form_state){
       }
       custom_menu_fields_set_value($item_id, $mfid, $value);
     }
-    $menulink_field_name = 'menu-fields-' . $mfid . '-linklist'; 
+    $menulink_field_name = 'menu-fields-' . $mfid . '-linklist';
     if ( isset( $item[$menulink_field_name] ) ) {
       $value = $item[$menulink_field_name];
       custom_menu_fields_set_value($item_id . '-menulink', $mfid, $value);
