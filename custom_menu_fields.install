@@ -1,15 +1,12 @@
 <?php
 /**
  * @file custom_menu_fields.install
- * Contains install and update functions for custom_menu_fields.
+ * Creates two database tables:
+ *   custom_menu_fields - keeps track of the fields themselves
+ *   custom_menu_fields_data - stores the data itself and associates it
+ *   with a specific menu_field with mfid (menu field id).
+ *
  */
-
-/**
- * Implements hook_install().
- */
-function custom_menu_fields_install() {
-  //drupal_install_schema('custom_menu_fields');
-}
 
 /**
  * Implements hook_uninstall().
@@ -22,7 +19,6 @@ function custom_menu_fields_uninstall() {
 /**
  * Implements hook_schema().
  */
-
 function custom_menu_fields_schema() {
   $schema['custom_menu_fields'] = array(
     'description' => 'Custom menu fields.',
@@ -53,7 +49,7 @@ function custom_menu_fields_schema() {
         'length' => '255',
         'default' => '',
         'not null' => FALSE,
-        'description' => 'Defines what type of form field to use 
+        'description' => 'Defines what type of form field to use
                           (e.g. text field, textarea, menu list)',
       ),
       'menu_type' => array(
@@ -131,7 +127,7 @@ function custom_menu_fields_field_schema($field) {
       ),
     ),
   );
-  
+
   return $schema;
 }
 
@@ -158,7 +154,7 @@ function custom_menu_fields_update_7100(&$sandbox) {
 
 
 /**
- * Taking the menu_restrictor field out & putting that functionality into a 
+ * Taking the menu_restrictor field out & putting that functionality into a
  * separate module.
  */
 function custom_menu_fields_update_7101(&$sandbox) {
@@ -176,7 +172,7 @@ function custom_menu_fields_update_7102(&$sandbox) {
     'not null' => FALSE,
     'description' => '',
   );
-  
+
   db_add_field('custom_menu_fields', 'exposed_field', $exposed_field);
 }
 
@@ -190,8 +186,7 @@ function custom_menu_fields_update_7103(&$sandbox) {
     'not null' => FALSE,
     'description' => "If true, the module creates a permission that controls who can edit/see this field",
   );
-  
+
   db_drop_field('custom_menu_fields', 'exposed_field');
   db_add_field('custom_menu_fields', 'permissioned', $permissioned);
 }
-
